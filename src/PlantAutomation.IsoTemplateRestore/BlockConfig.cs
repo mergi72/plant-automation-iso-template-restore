@@ -6,7 +6,7 @@ using Autodesk.AutoCAD.Geometry;
 
 namespace PlantAutomation.IsoTemplateRestore;
 
-internal sealed record AttributeSpec(string Tag, string? Value, string? Source);
+internal sealed record AttributeSpec(string Tag, string? Value, string? Source, string? FieldCode = null);
 internal sealed record BlockSpec(string Name, Point3d Position, double Rotation, IReadOnlyList<AttributeSpec>? Attributes = null);
 
 internal static class BlockConfig
@@ -50,7 +50,8 @@ internal static class BlockConfig
                 .Select(a => new AttributeSpec(
                     ((string?)a.Attribute("tag"))?.Trim() ?? "",
                     (string?)a.Attribute("value"),
-                    (string?)a.Attribute("source")))
+                    (string?)a.Attribute("source"),
+                    (string?)a.Attribute("fieldCode")))
                 .Where(a => a.Tag.Length > 0).ToList();
             result.Add(new BlockSpec(name, new Point3d(Read("x"), Read("y"), Read("z")), Read("rotation"), attributes));
         }
@@ -92,7 +93,8 @@ internal static class BlockConfig
                 element.Add(new XElement("Attributes", block.Attributes.Select(a =>
                     new XElement("Attribute", new XAttribute("tag", a.Tag),
                         a.Value is null ? null : new XAttribute("value", a.Value),
-                        a.Source is null ? null : new XAttribute("source", a.Source)))));
+                        a.Source is null ? null : new XAttribute("source", a.Source),
+                        a.FieldCode is null ? null : new XAttribute("fieldCode", a.FieldCode)))));
             root.Add(element);
         }
         // Write a complete replacement so a failed write cannot leave partial XML.

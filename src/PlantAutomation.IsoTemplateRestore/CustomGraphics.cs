@@ -90,6 +90,13 @@ internal static class CustomGraphics
         foreach (DBObject item in exploded)
         {
             if (item is not Entity entity) { item.Dispose(); continue; }
+            if (!IsCustomerGraphics(entity))
+            {
+                // Older snapshots may contain Plant's Drawing Area overlays.
+                // Plant recreates these from IsoConfig.xml itself.
+                entity.Dispose();
+                continue;
+            }
             var key = GeometryKey(entity);
             if (key is not null && existing.TryGetValue(key, out var available) && available > 0)
             {
@@ -140,6 +147,7 @@ internal static class CustomGraphics
     {
         if (entity is BlockReference or Table or Viewport) return false;
         if (string.Equals(entity.Layer, "Table", StringComparison.OrdinalIgnoreCase)) return false;
+        if (entity.Layer.StartsWith("Area-", StringComparison.OrdinalIgnoreCase)) return false;
         // AutoCAD drafting entities live in AcDbMgd. Plant custom entities use
         // other assemblies and must not be turned into ordinary drawing entities.
         return entity.GetType().Assembly == typeof(Line).Assembly;

@@ -17,7 +17,7 @@ The add-in recognizes erasures from `EraseAllObjs`. It does not edit the drawing
 
 ## Independent customer graphics
 
-The add-in clones eligible AutoCAD drawing entities from model space into a `PA_ISO_CUSTOM_GRAPHICS` block definition with origin `(0,0,0)`. Block references, system tables, viewports, and entities on layer `Table` are excluded. Original entities remain separate and editable. Plant 3D custom entities from other assemblies are also excluded. Customer block references use the XML mechanism instead.
+The add-in clones eligible AutoCAD drawing entities from model space into a `PA_ISO_CUSTOM_GRAPHICS` block definition with origin `(0,0,0)`. Block references, system tables, viewports, entities on layer `Table`, and entities on Plant's `Area-*` layers are excluded. Plant recreates the Drawing Area overlays from `IsoConfig.xml`; restoring them from the graphics snapshot can duplicate the areas. Older snapshots are also filtered when restored. Original customer entities remain separate and editable. Plant 3D custom entities from other assemblies are excluded. Customer block references use the XML mechanism instead.
 
 The definition is replaced from current independent entities only when `Iso.dwt` is saved or `P3DAUTOISOBLOCKSYNC` is run. Ordinary XML synchronization does not replace it because Project Setup may temporarily leave only some entities in model space while rebuilding the template. The snapshot has no version history. After an erase, the add-in inserts `PA_ISO_CUSTOM_GRAPHICS` at `(0,0,0)`, explodes it, compares the resulting entities with those Plant retained, adds missing entities, and removes the block reference. Geometry is stored in `Iso.dwt`, not in XML.
 
@@ -39,7 +39,7 @@ If the XML does not exist yet, the add-in creates it for the style when the temp
 
 ## Attributes and `source`
 
-On restore, the add-in creates `AttributeReference` objects from the block's attribute definitions and sets their text from XML. After an attribute changes, it tracks that `AttributeReference` and writes its new text. The optional `source` field is preserved as metadata; **it does not yet fetch values from the project database**. Attribute text is stored, but other reference properties and field definitions are not guaranteed to be reproduced.
+On restore, the add-in creates `AttributeReference` objects from the block's attribute definitions. It saves ordinary text as `value`. If an attribute contains an AutoCAD FIELD, it also saves the expression as `fieldCode` and attaches a new FIELD to the restored reference. This preserves dynamic values such as a plot date. A FIELD already lost from both the XML and the block definition must be inserted once again in the template. The optional `source` field is preserved as metadata; **it does not yet fetch values from the project database**. Other reference properties and individual formatting are not guaranteed to be reproduced.
 
 Example:
 

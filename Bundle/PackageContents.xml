@@ -2,7 +2,7 @@
 <ApplicationPackage SchemaVersion="1.0" AutodeskProduct="AutoCAD"
                     Name="Plant Automation ISO Template Restore"
                     Description="Restores configured blocks after Plant 3D Title Block Setup clears Iso.dwt"
-                    AppVersion="0.1.6" Author="Plant Automation"
+                    AppVersion="0.1.7" Author="Plant Automation"
                     ProductCode="{B32C2029-4B42-465C-9716-71A8A5A2E211}"
                     UpgradeCode="{24DDB978-2793-4286-971D-0D5970C90C36}">
   <CompanyDetails Name="Plant Automation" />

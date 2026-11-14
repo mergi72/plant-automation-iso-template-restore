@@ -170,9 +170,19 @@ public sealed class IsoTemplateRestore : IExtensionApplication
                 using var attribute = new AttributeReference();
                 attribute.SetAttributeFromBlock(attributeDefinition, reference.BlockTransform);
                 var configured = block.Attributes?.FirstOrDefault(a => string.Equals(a.Tag, attributeDefinition.Tag, StringComparison.OrdinalIgnoreCase));
-                attribute.TextString = configured?.Value ?? attributeDefinition.TextString;
+                var fieldCode = configured?.FieldCode ?? ReadFieldCode(transaction, attributeDefinition);
+                if (fieldCode is null)
+                    attribute.TextString = configured?.Value ?? attributeDefinition.TextString;
                 reference.AttributeCollection.AppendAttribute(attribute);
                 transaction.AddNewlyCreatedDBObject(attribute, true);
+                if (fieldCode is not null)
+                {
+                    // A field is a separate DBObject. Restoring TextString alone turns it
+                    // into static text and breaks values such as the plot date.
+                    using var field = new Field();
+                    field.SetFieldCode(fieldCode);
+                    attribute.SetField("TEXT", field);
+                }
             }
             inserted++;
             Log($"restored {block.Name} @ {block.Position}; drawing={doc.Name}");
@@ -242,7 +252,8 @@ public sealed class IsoTemplateRestore : IExtensionApplication
             {
                 if (attributeId.IsErased || transaction.GetObject(attributeId, OpenMode.ForRead, false) is not AttributeReference attribute) continue;
                 var source = matching?.Attributes?.FirstOrDefault(a => string.Equals(a.Tag, attribute.Tag, StringComparison.OrdinalIgnoreCase))?.Source;
-                attributes.Add(new AttributeSpec(attribute.Tag, attribute.TextString, source));
+                attributes.Add(new AttributeSpec(attribute.Tag, attribute.TextString, source,
+                    ReadFieldCode(transaction, attribute)));
             }
             if (attributes.Count == 0 && matching?.Attributes is { Count: > 0 }) attributes.AddRange(matching.Attributes);
             actual.Add(new BlockSpec(definition.Name, reference.Position, reference.Rotation, attributes));
@@ -254,6 +265,21 @@ public sealed class IsoTemplateRestore : IExtensionApplication
         }
         if (erasedReference is not null && erasedReference.ObjectId.IsErased) Add(erasedReference);
         return actual;
+    }
+
+    private static string? ReadFieldCode(Transaction transaction, DBObject obj)
+    {
+        try
+        {
+            var id = obj.GetField("TEXT");
+            if (id.IsNull) id = obj.GetField();
+            return id.IsNull ? null : (transaction.GetObject(id, OpenMode.ForRead) as Field)?.GetFieldCode();
+        }
+        catch (Autodesk.AutoCAD.Runtime.Exception ex) when (ex.ErrorStatus == Autodesk.AutoCAD.Runtime.ErrorStatus.KeyNotFound)
+        {
+            // Most attributes contain ordinary text and have no field dictionary.
+            return null;
+        }
     }
     private sealed class DocumentTracker
     {
